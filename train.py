@@ -5,18 +5,16 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 from model import LeNet
 from dataset import get_fashion_mnist_dataset
-from evaluate import evaluate_model
 
 # --- 1. 设置超参数 ---
-BATCH_SIZE = 32
-EPOCHS = 20
-LEARNING_RATE = 0.01
+EPOCHS = 50
+LEARNING_RATE = 0.001
 # --- 2. 获取数据集 ---
-# 获取FashionMNIST数据集，并划分为训练集和验证集
-train_loader, val_loader = get_fashion_mnist_dataset()
+# 注意：Windows 下 DataLoader 多进程需要放在 __main__ 保护内，这里不提前创建
 
 def train_model_process(model, train_loader, val_loader, epochs, learning_rate):
     """
@@ -51,16 +49,15 @@ def train_model_process(model, train_loader, val_loader, epochs, learning_rate):
         print('-' * 10) # 分隔线
         #初始化参数
         train_loss = 0.0 # 训练集损失
-        train_correct = 0 # 训练集正确预测数量
+        train_correct = 0 # 训练集正确预测数量（累加为 Python 标量）
         val_loss = 0.0 # 验证集损失
-        val_correct = 0 # 验证集正确预测数量
+        val_correct = 0 # 验证集正确预测数量（累加为 Python 标量）
         train_num = 0 # 训练集样本数量
         val_num = 0 # 验证集样本数量
         model.train()  # 设置模型为训练模式
 
         # 对每一个mini-batch进行训练和计算
         for batch_idx, (data, target) in enumerate(train_loader):
-            model.train()  # 设置模型为训练模式
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()  # 清零梯度
             outputs = model(data)  # 前向传播
@@ -70,39 +67,40 @@ def train_model_process(model, train_loader, val_loader, epochs, learning_rate):
             optimizer.step()  # 更新参数
 
             train_loss += loss.item()* data.size(0)  # 累加损失
-            train_correct += (pre_lab == target).sum()  # 累加正确预测数量
+            train_correct += (pre_lab == target).sum().item()  # 累加正确预测数量
             train_num += data.size(0)
 
 
         # 在验证集上评估模型性能
-        for batch_idx, (data, target) in enumerate(val_loader):
-            model.eval()  # 设置模型为评估模式
-            data, target = data.to(device), target.to(device)
-            outputs = model(data)  # 前向传播
-            pre_lab = torch.argmax(outputs, dim=1)  # 获取预测标签
-            loss = criterion(outputs, target)  # 计算损失
-            val_loss += loss.item() * data.size(0)  # 累加损失
-            val_correct += (pre_lab == target).sum()  # 累加正确预测数量
-            val_num += data.size(0) # 累加样本数量
+        with torch.no_grad():
+            for batch_idx, (data, target) in enumerate(val_loader):
+                model.eval()  # 设置模型为评估模式
+                data, target = data.to(device), target.to(device)
+                outputs = model(data)  # 前向传播
+                pre_lab = torch.argmax(outputs, dim=1)  # 获取预测标签
+                loss = criterion(outputs, target)  # 计算损失
+                val_loss += loss.item() * data.size(0)  # 累加损失
+                val_correct += (pre_lab == target).sum().item()  # 累加正确预测数量
+                val_num += data.size(0) # 累加样本数量
 
         train_loss_all.append(float(train_loss / train_num)) # 计算并保存训练集损失
-        train_accuracy_all.append(float(train_correct / train_num)) # 计算并保存训练集准确率
+        train_accuracy_all.append(train_correct / train_num) # 计算并保存训练集准确率
         val_loss_all.append(float(val_loss / val_num)) # 计算并保存验证集损失
-        val_accuracy_all.append(float(val_correct / val_num)) # 计算并保存验证集准确率
+        val_accuracy_all.append(val_correct / val_num) # 计算并保存验证集准确率
 
         print(f"Train Loss: {train_loss_all[-1]:.4f}, Train Accuracy: {train_accuracy_all[-1]:.4f}")
         print(f"Val Loss: {val_loss_all[-1]:.4f}, Val Accuracy: {val_accuracy_all[-1]:.4f}")
 
-    # 训练结束后，寻找最佳模型
-    if val_accuracy_all[-1] > best_accuracy:
-        best_accuracy = val_accuracy_all[-1]
-        best_model_state = copy.deepcopy(model.state_dict())
+        # 每个 epoch 结束后，保存最优模型参数
+        if val_accuracy_all[-1] > best_accuracy:
+            best_accuracy = val_accuracy_all[-1]
+            best_model_state = copy.deepcopy(model.state_dict())
 
     time_used = time.time() - since  # 计算训练时间
     print(f"训练和验证耗费的时间： {time_used // 60:.0f}m {time_used % 60:.0f}s")
 
-    model.load_state_dict(best_model_state)  # 加载最佳模型参数
-    torch.save(model.state_dict(), './best_model.pth')  # 保存最佳模型参数
+    os.makedirs('checkpoints', exist_ok=True)
+    torch.save(best_model_state, './checkpoints/best_model.pth')  # 保存最佳模型参数
 
     train_process = pd.DataFrame(data={
         'epoch': range(epochs),
@@ -141,10 +139,18 @@ def matplot_acc_loss(train_process):
     plt.legend()
 
     plt.tight_layout()
+
+    # 保存到 results 目录，文件名带时间戳
+    os.makedirs('results', exist_ok=True)
+    timestamp = time.strftime('%Y%m%d_%H%M%S')
+    save_path = os.path.join('results', f'train_curves_{timestamp}.png')
+    plt.savefig(save_path, dpi=150)
+
+    # 同时仍然显示
     plt.show()
 
 if __name__ == "__main__":
-    LeNet = LeNet()
+    model = LeNet()
     train_loader, val_loader = get_fashion_mnist_dataset()
-    train_model_process = train_model_process(LeNet, train_loader, val_loader, EPOCHS, LEARNING_RATE)
-    matplot_acc_loss(train_model_process)  # 绘制损失和准确率曲线
+    training_history = train_model_process(model, train_loader, val_loader, EPOCHS, LEARNING_RATE)
+    matplot_acc_loss(training_history)  # 绘制损失和准确率曲线
