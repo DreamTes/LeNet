@@ -1,0 +1,33 @@
+# IDE settings
+.idea/
+.vscode/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project artifacts
+data/
+checkpoints/
+results/
+outputs/
+logs/
+
+# Model files
+*.pth
+*.pt
+*.onnx
+
+# Jupyter
+.ipynb_checkpoints/
