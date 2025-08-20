@@ -27,13 +27,18 @@ logs/
 # 允许的例外（根据需要增删）
 !checkpoints/best_model.pth
 !results/*.png
-!results/*.csv
 !results/README.md
 
 # Model files
 *.pth
 *.pt
 *.onnx
+
+# Keep selected checkpoints/results even if matched above (order matters: rules below override above)
+!checkpoints/**/*.pth
+!checkpoints/best_model.pth
+!results/**/*.png
+!results/**/*.csv
 
 # Jupyter
 .ipynb_checkpoints/
