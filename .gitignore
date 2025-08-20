@@ -19,10 +19,16 @@ Thumbs.db
 
 # Project artifacts
 data/
-checkpoints/
-results/
+checkpoints/*
+results/*
 outputs/
 logs/
+
+# 允许的例外（根据需要增删）
+!checkpoints/best_model.pth
+!results/*.png
+!results/*.csv
+!results/README.md
 
 # Model files
 *.pth
