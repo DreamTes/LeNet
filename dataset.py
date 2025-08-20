@@ -12,8 +12,9 @@ def get_fashion_mnist_dataset(root_dir='./data',train_split_ratio=0.8):
     """
     # 定义数据预处理
     transform = transforms.Compose([
-        transforms.Resize(28),# 确保图片尺寸是28x28
-        transforms.ToTensor() # 将图片转换为PyTorch张量
+        transforms.Resize(28),  # 确保图片尺寸是28x28
+        transforms.ToTensor(),  # 将图片转换为PyTorch张量
+        transforms.Normalize((0.2861,), (0.3530,))  # 标准化（FashionMNIST 常用均值/方差）
     ])
 
     # 下载并加载FashionMNIST数据集
@@ -25,7 +26,25 @@ def get_fashion_mnist_dataset(root_dir='./data',train_split_ratio=0.8):
     train_data, val_data = data.random_split(full_train_dataset, [train_size, val_size])
 
     # 创建DataLoader
-    train_loader = data.DataLoader(dataset=train_data, batch_size=32, shuffle=True, num_workers=2)
-    val_loader = data.DataLoader(dataset=val_data, batch_size=32, shuffle=True, num_workers=2)
+    train_loader = data.DataLoader(dataset=train_data, batch_size=32, shuffle=True, num_workers=0)
+    val_loader = data.DataLoader(dataset=val_data, batch_size=32, shuffle=False, num_workers=0)
 
     return train_loader, val_loader
+
+# 获取测试集
+def get_test_fashion_mnist_dataset(root_dir='./data'):
+    
+    test_dataset = FashionMNIST(
+        root=root_dir,
+        train=False,
+        download=True,
+        transform=transforms.Compose([
+            transforms.Resize(28),
+            transforms.ToTensor(),
+            transforms.Normalize((0.2861,), (0.3530,))
+        ])
+    )
+
+    test_loader = data.DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, num_workers=0)
+
+    return test_loader
