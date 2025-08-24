@@ -10,11 +10,8 @@ import os
 from model import LeNet
 from dataset import get_fashion_mnist_dataset
 
-# --- 1. 设置超参数 ---
 EPOCHS = 50
 LEARNING_RATE = 0.001
-# --- 2. 获取数据集 ---
-# 注意：Windows 下 DataLoader 多进程需要放在 __main__ 保护内，这里不提前创建
 
 def train_model_process(model, train_loader, val_loader, epochs, learning_rate):
     """
@@ -100,7 +97,9 @@ def train_model_process(model, train_loader, val_loader, epochs, learning_rate):
     print(f"训练和验证耗费的时间： {time_used // 60:.0f}m {time_used % 60:.0f}s")
 
     os.makedirs('checkpoints', exist_ok=True)
-    torch.save(best_model_state, './checkpoints/best_model.pth')  # 保存最佳模型参数
+    timestamp = time.strftime('%Y%m%d_%H%M%S')
+    save_path = os.path.join('checkpoints', f'best_model_{timestamp}.pth')
+    torch.save(best_model_state, save_path)  # 保存最佳模型参数
 
     train_process = pd.DataFrame(data={
         'epoch': range(epochs),
